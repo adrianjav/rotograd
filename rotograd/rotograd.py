@@ -98,7 +98,7 @@ class RotateModule(nn.Module):
 
 
 class RotoGrad(nn.Module):
-    def __init__(self, backbone, heads, input_size, *args, alpha, burn_in_period=20):
+    def __init__(self, backbone, heads, input_size, *args, alpha, burn_in_period=20, normalize_losses=True):
         super(RotoGrad, self).__init__()
         num_tasks = len(heads)
 
@@ -119,6 +119,7 @@ class RotoGrad(nn.Module):
         self.alpha = alpha
         self._coop = False
         self.burn_in_period = burn_in_period
+        self.normalize_losses = normalize_losses
 
         self.rep = None
         self.grads = [None for _ in range(num_tasks)]
@@ -180,9 +181,15 @@ class RotoGrad(nn.Module):
 
             self.iteration_counter += 1
 
-        for i, loss in enumerate(losses):
-            self.losses[i] = loss.item() / max(self.initial_losses[i], 1e-15)
-            loss.backward()
+        for i in range(len(losses)):
+            loss = losses[i] / self.initial_losses[i]
+            self.losses[i] = loss.item()
+
+            if self.normalize_losses:
+                loss.backward()
+            else:
+                losses[i].backward()
+
         self.rep.backward(self._rep_grad)
 
     @property
@@ -227,8 +234,9 @@ class RotoGrad(nn.Module):
 
 
 class RotoGradNorm(RotoGrad):
-    def __init__(self, backbone, heads, latent_size, *args, alpha):
-        super().__init__(backbone, heads, latent_size, *args, alpha=alpha)
+    def __init__(self, backbone, heads, latent_size, *args, alpha, burn_in_period=20, normalize_losses=True):
+        super().__init__(backbone, heads, latent_size, *args, alpha=alpha, burn_in_period=burn_in_period,
+                         normalize_losses=normalize_losses)
         self.weight_ = nn.ParameterList([nn.Parameter(torch.ones([]), requires_grad=True) for _ in range(len(heads))])
 
     @property
