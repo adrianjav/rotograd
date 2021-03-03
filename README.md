@@ -1,7 +1,5 @@
 # RotoGrad
 
----
-
 
 [comment]: <> ([![Paper]&#40;http://img.shields.io/badge/paper-arxiv.2002.11369-B31B1B.svg&#41;]&#40;https://arxiv.org/abs/2002.11369&#41;)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/adrianjav/rotograd/blob/main/LICENSE)
@@ -9,9 +7,6 @@
 > A library for dynamic gradient homogenization for multitask learning in Pytorch
 
 ## Installation
-
----
-
 
 Installing this library is as simple as running in your terminal
 ```bash
@@ -22,9 +17,6 @@ The code has been tested in Pytorch 1.7.0, yet it should work on most versions. 
 if that were not the case.
 
 ## Overview
-
----
-
 
 This is the official Pytorch implementation of RotoGrad, an algorithm to reduce the negative transfer due 
 to gradient conflict with respect to the shared parameters when different tasks of a multi-task learning
@@ -79,8 +71,6 @@ def step(x, y1, y2):
 ```
 
 ## Cooperative mode
-
----
 
 In the main paper, a cooperative version of RotoGrad (and RotoGradNorm) is introduced. 
 The intuition is that, after a few epochs where RotoGrad has properly aligned the gradients, it can start
