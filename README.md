@@ -15,7 +15,7 @@
 
 Installing this library is as simple as running in your terminal
 ```bash
-pip install git+https://github.com/adrianjav/rotograd
+pip install rotograd
 ```
 
 The code has been tested in Pytorch 1.7.0, yet it should work on most versions. Feel free to open an issue
