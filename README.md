@@ -1,7 +1,7 @@
 # RotoGrad
 
 
-[comment]: <> ([![Paper]&#40;http://img.shields.io/badge/paper-arxiv.2002.11369-B31B1B.svg&#41;]&#40;https://arxiv.org/abs/2002.11369&#41;)
+[![Paper](http://img.shields.io/badge/paper-arxiv.2103.02631-blue.svg)](https://arxiv.org/abs/2103.02631)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/adrianjav/rotograd/blob/main/LICENSE)
 
 > A library for dynamic gradient homogenization for multitask learning in Pytorch
@@ -80,10 +80,15 @@ Enabling this mode is as simple as calling `model.coop(True/False)` after `T` tr
 similarly  to `.train()` and `.eval()` in Pytorch's Modules, setting a boolean variable to tell RotoGrad
 to enable/disable the cooperative mode.
 
-[comment]: <> (## Cite)
+## Citing
 
-[comment]: <> (Consider citing the following paper if you use RotoGrad:)
+Consider citing the following paper if you use RotoGrad:
 
-[comment]: <> (```)
-
-[comment]: <> (```)
+```bibtex
+@article{javaloy2021rotograd,
+  title={Rotograd: Dynamic Gradient Homogenization for Multi-Task Learning},
+  author={Javaloy, Adri\'an and Valera, Isabel},
+  journal={arXiv preprint arXiv:2103.02631},
+  year={2021}
+}
+```
