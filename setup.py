@@ -39,5 +39,5 @@ setup(
               'Positive Transfer', 'Gradient Conflict'],
     packages=find_packages(),
     python_requires='>=3.7',
-    install_requires=['torch>=1.5'],
+    install_requires=['torch>=1.5', 'geotorch'],
 )
