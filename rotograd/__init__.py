@@ -1,5 +1,4 @@
-from geotorch.parametrize import cached
-from .rotograd import VanillaMTL, RotoGrad, RotoGradNorm
+from .rotograd import VanillaMTL, RotoGrad, RotoGradNorm, cached
 
 __version__ = '0.1.2'
 

@@ -1,13 +1,17 @@
+from typing import Sequence, Any
+
 import torch
 import torch.nn as nn
 
 from geotorch import orthogonal
+from geotorch.parametrize import cached
 
-# TODO typing: T = TypeVar('T', bound='Module')
+
+cached.__doc__ = r"""Context-manager that enables the caching system (used for avoid recomputing rotation matrices)."""
 
 
 def divide(numer, denom):
-    """Numerically stable division"""
+    """Numerically stable division."""
     epsilon = 1e-15
     return torch.sign(numer) * torch.sign(denom) * torch.exp(torch.log(numer.abs() + epsilon) - torch.log(denom.abs() + epsilon))
 
@@ -102,7 +106,56 @@ class RotateModule(nn.Module):
 
 
 class RotoGrad(nn.Module):
-    def __init__(self, backbone, heads, input_size, *args, alpha, burn_in_period=20, normalize_losses=True):
+    r"""
+    Implementation of RotoGrad as described in the original paper. [1]_
+
+    Parameters
+    ----------
+    backbone
+        Shared module.
+    heads
+        Task-specific modules.
+    latent_size
+        Size of the shared representation, that is, size of the output of backbone.
+    alpha
+        :math:`\alpha` hyper-parameter as described in GradNorm, [2]_ used to compute the reference direction.
+    burn_in_period : optional, default=20
+        When back-propagating towards the shared parameters, *each task loss is normalized dividing by its initial
+        value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
+        will be replaced by the value of the loss at that iteration, that is, :math:`t_0 = burn\_in\_period`.
+        This is done to overcome problems with losses quickly changing in the first iterations.
+    normalize_losses : optional, default=True
+        Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
+
+
+    Attributes
+    ----------
+    num_tasks
+        Number of tasks/heads of the module.
+    backbone
+        Shared module.
+    heads
+        Sequence with the (rotated) task-specific heads.
+    rep
+        Current output of the backbone (after calling forward during training).
+
+
+    References
+    ----------
+    .. [1] Javaloy, Adrián, and Isabel Valera. "Rotograd: Dynamic Gradient Homogenization for Multi-Task Learning."
+        arXiv preprint arXiv:2103.02631 (2021).
+
+    .. [2] Chen, Zhao, et al. "Gradnorm: Gradient normalization for adaptive loss balancing in deep multitask networks."
+        International Conference on Machine Learning. PMLR, 2018.
+
+    """
+    num_tasks: int
+    backbone: nn.Module
+    heads: Sequence[nn.Module]
+    rep: torch.Tensor
+
+    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
+                 burn_in_period: int = 20, normalize_losses: bool = True):
         super(RotoGrad, self).__init__()
         num_tasks = len(heads)
 
@@ -114,12 +167,12 @@ class RotoGrad(nn.Module):
 
         # Parameterize rotations so we can run unconstrained optimization
         for i in range(num_tasks):
-            self.register_parameter(f'rotation_{i}', nn.Parameter(torch.eye(input_size), requires_grad=True))
+            self.register_parameter(f'rotation_{i}', nn.Parameter(torch.eye(latent_size), requires_grad=True))
             orthogonal(self, f'rotation_{i}', triv='expm')  # uses exponential map (alternative: cayley)
 
         # Parameters
         self.num_tasks = num_tasks
-        self.input_size = input_size
+        self.latent_size = latent_size
         self.alpha = alpha
         self._coop = False
         self.burn_in_period = burn_in_period
@@ -135,27 +188,32 @@ class RotoGrad(nn.Module):
         self.iteration_counter = 0
 
     @property
-    def rotation(self):
+    def rotation(self) -> Sequence[torch.Tensor]:
+        r"""List of rotations matrices, one per task. These are trainable, make sure to call `detach()`."""
         return [getattr(self, f'rotation_{i}') for i in range(self.num_tasks)]
 
     @property
-    def backbone(self):
+    def backbone(self) -> nn.Module:
         return self._backbone[0]
 
-    def train(self, mode=True):
+    def train(self, mode: bool = True) -> nn.Module:
         super().train(mode)
         self.backbone.train(mode)
         for head in self.heads:
             head.train(mode)
+        return self
 
-    def coop(self, value=True):
+    def coop(self, value: bool = True) -> nn.Module:
+        r"""Enables/disables the RotoGrad's cooperative mode."""
         self._coop = value
         return self
 
-    def __len__(self):
+    def __len__(self) -> int:
+        r"""Returns the number of tasks."""
         return self.num_tasks
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> nn.Module:
+        r"""Returns an end-to-end model for the selected task."""
         return nn.Sequential(self.backbone, self.heads[item])
 
     def _hook(self, index):
@@ -164,7 +222,20 @@ class RotoGrad(nn.Module):
 
         return _hook_
 
-    def forward(self, x):
+    def forward(self, x: Any) -> Sequence[Any]:
+        """Forwards the input `x` through the backbone and all heads, returning a list with all the task predictions.
+        It can be thought as something similar to:
+
+        .. code-block:: python
+
+            preds = []
+            z = backbone(x)
+            for R_i, head in zip(rotations, heads):
+                z_i = rotate(R_i, z)
+                preds.append(head(z_i))
+            return preds
+
+        """
         preds = []
         self.rep = self.backbone(x)
 
@@ -177,7 +248,15 @@ class RotoGrad(nn.Module):
 
         return preds
 
-    def backward(self, losses):
+    def backward(self, losses: Sequence[torch.Tensor]) -> None:
+        r"""Computes the backward computations for the entire model (that is, shared and specific modules).
+        It also computes the gradients for the rotation matrices.
+
+        Parameters
+        ----------
+        losses
+            Sequence of the task losses from which back-propagate.
+        """
         if self.training:
             if self.iteration_counter == 0 or self.iteration_counter == self.burn_in_period:
                 for i, loss in enumerate(losses):
@@ -238,13 +317,59 @@ class RotoGrad(nn.Module):
 
 
 class RotoGradNorm(RotoGrad):
-    def __init__(self, backbone, heads, latent_size, *args, alpha, burn_in_period=20, normalize_losses=True):
+    r"""Implementation of RotoGrad as described in the original paper, [1]_ combined with GradNorm [2]_ to homogeneize
+    both the direction and magnitude of the task gradients.
+
+    Parameters
+    ----------
+    backbone
+        Shared module.
+    heads
+        Task-specific modules.
+    latent_size
+        Size of the shared representation, that is, size of the output of backbone.
+    alpha
+        :math:`\alpha` hyper-parameter as described in GradNorm, [2]_ used to compute the reference direction.
+    burn_in_period : optional, default=20
+        When back-propagating towards the shared parameters, *each task loss is normalized dividing by its initial
+        value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
+        will be replaced by the value of the loss at that iteration, that is, :math:`t_0 = burn\_in\_period`.
+        This is done to overcome problems with losses quickly changing in the first iterations.
+    normalize_losses : optional, default=True
+        Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
+
+
+    Attributes
+    ----------
+    num_tasks
+        Number of tasks/heads of the module.
+    backbone
+        Shared module.
+    heads
+        Sequence with the (rotated) task-specific heads.
+    rep
+        Current output of the backbone (after calling forward during training).
+
+
+    References
+    ----------
+    .. [1] Javaloy, Adrián, and Isabel Valera. "Rotograd: Dynamic Gradient Homogenization for Multi-Task Learning."
+        arXiv preprint arXiv:2103.02631 (2021).
+
+    .. [2] Chen, Zhao, et al. "Gradnorm: Gradient normalization for adaptive loss balancing in deep multitask networks."
+        International Conference on Machine Learning. PMLR, 2018.
+
+    """
+
+    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
+                 burn_in_period: int = 20, normalize_losses: bool = True):
         super().__init__(backbone, heads, latent_size, *args, alpha=alpha, burn_in_period=burn_in_period,
                          normalize_losses=normalize_losses)
         self.weight_ = nn.ParameterList([nn.Parameter(torch.ones([]), requires_grad=True) for _ in range(len(heads))])
 
     @property
-    def weight(self):
+    def weight(self) -> Sequence[torch.Tensor]:
+        r"""List of task weights, one per task. These are trainable, make sure to call `detach()`."""
         ws = [w.exp() + 1e-15 for w in self.weight_]
         with torch.no_grad():
             norm_coef = self.num_tasks / sum(ws)
