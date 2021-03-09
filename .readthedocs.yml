@@ -9,5 +9,5 @@ python:
       - method: pip
         path: .
         extra_requirements:
-           - dev
-           - sphinx_autodoc_typehints
+           - docs
+           - sphinx-autodoc-typehints
