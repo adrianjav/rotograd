@@ -2,6 +2,12 @@ from setuptools import setup, find_packages
 import os
 import re
 
+DOCS_REQUIRES = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
+
 classifiers = [
     'Development Status :: 3 - Alpha',
     'Programming Language :: Python',
@@ -40,4 +46,5 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=['torch>=1.5', 'geotorch'],
+    extras_require={'docs': DOCS_REQUIRES},
 )
