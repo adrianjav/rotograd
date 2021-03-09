@@ -3,9 +3,13 @@ import torch.nn as nn
 
 from geotorch import orthogonal
 
-import utils as u
-
 # TODO typing: T = TypeVar('T', bound='Module')
+
+
+def divide(numer, denom):
+    """Numerically stable division"""
+    epsilon = 1e-15
+    return torch.sign(numer) * torch.sign(denom) * torch.exp(torch.log(numer.abs() + epsilon) - torch.log(denom.abs() + epsilon))
 
 
 class VanillaMTL(nn.Module):
@@ -206,7 +210,7 @@ class RotoGrad(nn.Module):
         # Compute the reference vector
         mean_norm = mean_grad.norm(p=2)
         inverse_ratios = [(loss / mean_loss) ** self.alpha for loss in self.losses]
-        old_grads2 = [g * u.divide(mean_norm * ir, g.norm(p=2)) for g, ir in zip(old_grads, inverse_ratios)]
+        old_grads2 = [g * divide(mean_norm * ir, g.norm(p=2)) for g, ir in zip(old_grads, inverse_ratios)]
         mean_grad = sum([g for g in old_grads2]).detach().clone() / len(grads)
 
         for i, grad in enumerate(grads):
@@ -226,8 +230,8 @@ class RotoGrad(nn.Module):
             if self._coop:
                 mean_grad_norm = (self.R_hook1[i] + self.R_hook2[i]) * 0.5
                 mean_grad_norm = torch.norm(mean_grad_norm, p=2)
-                weight1 = u.divide(mean_grad_norm, torch.norm(self.R_hook1[i], p=2))
-                weight2 = u.divide(mean_grad_norm, torch.norm(self.R_hook2[i], p=2))
+                weight1 = divide(mean_grad_norm, torch.norm(self.R_hook1[i], p=2))
+                weight2 = divide(mean_grad_norm, torch.norm(self.R_hook2[i], p=2))
                 self.rotation[i].backward(self.R_hook1[i] * weight1 + self.R_hook2[i] * weight2)
 
         return sum(old_grads)
