@@ -1,8 +1,10 @@
 # RotoGrad
 
 
-[![Paper](http://img.shields.io/badge/paper-arxiv.2103.02631-blue.svg)](https://arxiv.org/abs/2103.02631)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/adrianjav/rotograd/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-stable-informational.svg)](https://rotograd.readthedocs.io/en/stable/index.html)
+[![Package](https://img.shields.io/badge/pypi-rotograd-informational.svg)](https://pypi.org/project/rotograd/)
+[![Paper](http://img.shields.io/badge/paper-arxiv.2103.02631-9cf.svg)](https://arxiv.org/abs/2103.02631)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](https://github.com/adrianjav/rotograd/blob/main/LICENSE)
 
 > A library for dynamic gradient homogenization for multitask learning in Pytorch
 
