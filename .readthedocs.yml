@@ -10,3 +10,4 @@ python:
         path: .
         extra_requirements:
            - dev
+           - sphinx_autodoc_typehints
