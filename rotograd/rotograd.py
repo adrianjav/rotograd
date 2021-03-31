@@ -124,7 +124,7 @@ class RotoGrad(nn.Module):
         value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
         will be replaced by the value of the loss at that iteration, that is, :math:`t_0 = burn\_in\_period`.
         This is done to overcome problems with losses quickly changing in the first iterations.
-    normalize_losses : optional, default=True
+    normalize_losses : optional, default=False
         Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
 
 
@@ -155,7 +155,7 @@ class RotoGrad(nn.Module):
     rep: torch.Tensor
 
     def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
-                 burn_in_period: int = 20, normalize_losses: bool = True):
+                 burn_in_period: int = 20, normalize_losses: bool = False):
         super(RotoGrad, self).__init__()
         num_tasks = len(heads)
 
@@ -335,7 +335,7 @@ class RotoGradNorm(RotoGrad):
         value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
         will be replaced by the value of the loss at that iteration, that is, :math:`t_0 = burn\_in\_period`.
         This is done to overcome problems with losses quickly changing in the first iterations.
-    normalize_losses : optional, default=True
+    normalize_losses : optional, default=False
         Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
 
 
@@ -362,7 +362,7 @@ class RotoGradNorm(RotoGrad):
     """
 
     def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
-                 burn_in_period: int = 20, normalize_losses: bool = True):
+                 burn_in_period: int = 20, normalize_losses: bool = False):
         super().__init__(backbone, heads, latent_size, *args, alpha=alpha, burn_in_period=burn_in_period,
                          normalize_losses=normalize_losses)
         self.weight_ = nn.ParameterList([nn.Parameter(torch.ones([]), requires_grad=True) for _ in range(len(heads))])
