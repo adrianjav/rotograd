@@ -7,4 +7,8 @@ RotoGrad
 
 .. autoclass:: RotoGrad
     :members:
-    :show-inheritance:    
+    :show-inheritance:
+    
+    .. automethod:: forward
+    .. automethod:: backward
+    .. autoproperty:: rotation

@@ -17,6 +17,7 @@
    :caption: RotoGrad API
    :hidden:
 
+   rotograd/rotateonly.rst
    rotograd/rotograd.rst
    rotograd/rotogradnorm.rst
    rotograd/cached.rst
@@ -52,13 +53,13 @@ How to use
 Suppose you have a :python:`backbone` model shared across tasks, and two different tasks to solve. These tasks take the output of the backbone :python:`z = backbone(x)` and fed it to a task-specific model (:python:`head1` and :python:`head2`) to obtain the predictions of their tasks, that is,
 :python:`y1 = head1(z)` and :python:`y2 = head2(z)`.
 
-Then you can simply use RotoGrad or RotoGradNorm (RotoGrad + GradNorm) by putting all parts together 
+Then you can simply use RotateOnly, RotoGrad, or RotoGradNorm (RotateOnly + GradNorm) by putting all parts together 
 in a single model.
 
 .. code-block:: python
 
-    from rotograd import RotoGradNorm
-    model = RotoGradNorm(backbone, [head1, head2], size_z, alpha=1.)
+    from rotograd import RotoGrad
+    model = RotoGrad(backbone, [head1, head2], size_z)
 
 where you can recover the backbone and i-th head simply calling :python:`model.backbone` and
 :python:`model.heads[i]`. Even more, you can obtain the end-to-end model for a single task (that is,
@@ -86,7 +87,7 @@ Finally, we can train the model on all tasks using a simple step function:
         optim_rotograd.zero_grad()
 
         with rotograd.cached():  # Speeds-up computations
-            pred1, pred_2 = model(x)
+            pred1, pred2 = model(x)
             
             loss1 = loss_task1(pred1, y1)
             loss2 = loss_task2(pred2, y2)
@@ -97,14 +98,6 @@ Finally, we can train the model on all tasks using a simple step function:
         optim_rotograd.step()
             
         return loss1, loss2
-
-Cooperative mode
-^^^^^^^^^^^^^^^^
-
-|project| has a cooperative mode. The intuition is that, after a few epochs where RotoGrad has properly aligned the gradients, it can start focusing on helping to reduce the tasks loss functions as well. 
-
-Enabling this mode is as simple as calling :python:`model.coop(True/False)` after :python:`T` training epochs. This method works 
-similarly  to :python:`model.train()` and :python:`model.eval()` in Pytorch's Modules, setting a boolean variable to tell |project| to enable/disable the cooperative mode.
 
     
 Contribute
@@ -124,7 +117,7 @@ Citing
 .. code-block:: bibtex
 
     @article{javaloy2021rotograd,
-        title={Rotograd: Dynamic Gradient Homogenization for Multi-Task Learning},
+        title={RotoGrad: Gradient Homogenization in Multitask Learning},
         author={Javaloy, Adri\'an and Valera, Isabel},
         journal={arXiv preprint arXiv:2103.02631},
         year={2021}

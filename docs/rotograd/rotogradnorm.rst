@@ -12,4 +12,3 @@ RotoGradNorm
     .. automethod:: forward
     .. automethod:: backward
     .. autoproperty:: rotation
-    .. automethod:: coop
