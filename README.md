@@ -29,12 +29,11 @@ two different tasks you want to solve. These tasks take the output of the backbo
 it to a task-specific model (`head1` and `head2`) to obtain the predictions of their tasks, that is,
 `y1 = head1(z)` and `y2 = head2(z)`.
 
-Then you can simply use RotoGrad or RotoGradNorm (RotoGrad + GradNorm) by putting all parts together in a
-single model.
+Then you can simply use RotateOnly, RotoGrad. or RotoGradNorm (RotateOnly + GradNorm) by putting all parts together in a single model.
 
 ```python
-from rotograd import RotoGradNorm
-model = RotoGradNorm(backbone, [head1, head2], size_z, alpha=1.)
+from rotograd import RotoGrad
+model = RotoGrad(backbone, [head1, head2], size_z, alpha=1.)
 ```
 
 where you can recover the backbone and i-th head simply calling `model.backbone` and `model.heads[i]`. Even
@@ -59,7 +58,7 @@ def step(x, y1, y2):
     optim_rotograd.zero_grad()
 
     with rotograd.cached():  # Speeds-up computations by caching Rotograd's parameters
-        pred1, pred_2 = model(x)
+        pred1, pred2 = model(x)
         
         loss1 = loss_task1(pred1, y1)
         loss2 = loss_task2(pred2, y2)
@@ -72,23 +71,13 @@ def step(x, y1, y2):
     return loss1, loss2
 ```
 
-## Cooperative mode
-
-In the main paper, a cooperative version of RotoGrad (and RotoGradNorm) is introduced. 
-The intuition is that, after a few epochs where RotoGrad has properly aligned the gradients, it can start
-focusing on helping to reduce the tasks loss functions as well. 
-
-Enabling this mode is as simple as calling `model.coop(True/False)` after `T` training epochs. This method works 
-similarly  to `.train()` and `.eval()` in Pytorch's Modules, setting a boolean variable to tell RotoGrad
-to enable/disable the cooperative mode.
-
 ## Citing
 
 Consider citing the following paper if you use RotoGrad:
 
 ```bibtex
 @article{javaloy2021rotograd,
-  title={Rotograd: Dynamic Gradient Homogenization for Multi-Task Learning},
+  title={RotoGrad: Gradient Homogenization in Multitask Learning},
   author={Javaloy, Adri\'an and Valera, Isabel},
   journal={arXiv preprint arXiv:2103.02631},
   year={2021}

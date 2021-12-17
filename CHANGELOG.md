@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2021-12-17
+
+### Added
+
+- Introduced RotateOnly class. This is equivalent to the RotoGrad class of version 0.1.4.
+- Added `backbone_loss` argument to backward to allow for backbone-specific losses.
+
+### Changed
+
+- Updated VanillaMTL to have the same methods as RotoGrad class.
+- Modified RotoGrad so that it also scales the gradients as described in the updated version of the paper.
+- Enabled gradient computation when computing the normalizing factor of RotoGradNorm.
+  
 ## [0.1.4] - 2021-03-31
 
 ### Changed
@@ -17,3 +30,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [unreleased]: https://github.com/adrianjav/rotograd/compare/v0.1.4...HEAD
 [0.1.4]: https://github.com/adrianjav/rotograd/compare/v0.1.3...v0.1.4
+[0.1.5]: https://github.com/adrianjav/rotograd/compare/v0.1.4...v0.1.5

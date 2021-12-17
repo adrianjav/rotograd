@@ -33,7 +33,7 @@ with open(init_path, 'r', encoding='utf8') as f:
 setup(
     name='rotograd',
     version=version,
-    description='Dynamic Gradient Homogenization for Multitask Learning in Pytorch',
+    description='RotoGrad: Gradient Homogenization in Multitask Learning in Pytorch',
     author='Adrián Javaloy',
     author_email='adrian.javaloy@gmail.com',
     license='MIT',
