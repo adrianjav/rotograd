@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5.1] - 2022-02-13
+
+### Added
+
+- Working toy example (folder `example`).
+
+### Changed
+
+- Fixed small bugs in RotoGrad (attribute names and properties inheritance).
+
 ## [0.1.5] - 2021-12-17
 
 ### Added
@@ -31,3 +41,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [unreleased]: https://github.com/adrianjav/rotograd/compare/v0.1.4...HEAD
 [0.1.4]: https://github.com/adrianjav/rotograd/compare/v0.1.3...v0.1.4
 [0.1.5]: https://github.com/adrianjav/rotograd/compare/v0.1.4...v0.1.5
+[0.1.5.1]: https://github.com/adrianjav/rotograd/compare/v0.1.5...v0.1.5.1
