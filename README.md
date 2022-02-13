@@ -21,7 +21,7 @@ if that were not the case.
 ## Overview
 
 This is the official Pytorch implementation of RotoGrad, an algorithm to reduce the negative transfer due 
-to gradient conflict with respect to the shared parameters when different tasks of a multi-task learning
+to gradient conflict with respect to the shared parameters when different tasks of a multitask learning
 system fight for the shared resources.
 
 Let's say you have a hard-parameter sharing architecture with a `backbone` model shared across tasks, and 

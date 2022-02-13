@@ -57,13 +57,14 @@ def create_trainer(model, tasks, optims, loaders, args):
                 losses.append(loss_i)
                 training_loss += loss_i.item() * task_i.weight
 
-        if args.dataset.name == 'dummy' and (engine.state.epoch == engine.state.max_epochs or engine.state.epoch % args.training.plot_every == 0):
-            fig = plot_toy(grid, model, tasks, [zt, zt_task['left'], zt_task['right']],
-                           trainer.state.iteration - 1, levels=20, lims=lims)
-            fig.savefig(f'plots/step_{engine.state.iteration - 1}.png')
-            plt.close(fig)
+            if args.dataset.name == 'dummy' and (engine.state.epoch == engine.state.max_epochs or engine.state.epoch % args.training.plot_every == 0):
+                fig = plot_toy(grid, model, tasks, [zt, zt_task['left'], zt_task['right']],
+                               trainer.state.iteration - 1, levels=20, lims=lims)
+                fig.savefig(f'plots/step_{engine.state.iteration - 1}.png')
+                plt.close(fig)
 
-        model.backward(losses)
+            model.backward(losses)
+            
         for optim in optims:  # Run the optimizers
             optim.step()
 

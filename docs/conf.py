@@ -13,9 +13,10 @@
 import os
 import sys
 
+# sys.path.insert(0, os.path.abspath('../rotograd'))
+sys.path.insert(0, os.path.abspath('..'))
 import rotograd
 
-sys.path.insert(0, os.path.abspath('../rotograd'))
 
 
 # -- Project information -----------------------------------------------------
