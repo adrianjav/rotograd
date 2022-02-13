@@ -181,7 +181,7 @@ class RotateOnly(nn.Module):
     References
     ----------
     .. [1] Javaloy, Adrián, and Isabel Valera. "RotoGrad: Gradient Homogenization in Multitask Learning."
-        arXiv preprint arXiv:2103.02631 (2021).
+        International Conference on Learning Representations (2022).
 
     """
     num_tasks: int
@@ -408,7 +408,7 @@ class RotoGrad(RotateOnly):
     References
     ----------
     .. [1] Javaloy, Adrián, and Isabel Valera. "RotoGrad: Gradient Homogenization in Multitask Learning."
-        arXiv preprint arXiv:2103.02631 (2021).
+        International Conference on Learning Representations (2022).
 
     """
     num_tasks: int
@@ -479,7 +479,7 @@ class RotoGradNorm(RotoGrad):
     References
     ----------
     .. [1] Javaloy, Adrián, and Isabel Valera. "RotoGrad: Gradient Homogenization in Multitask Learning."
-        arXiv preprint arXiv:2103.02631 (2021).
+        International Conference on Learning Representations (2022).
 
     .. [2] Chen, Zhao, et al. "Gradnorm: Gradient normalization for adaptive loss balancing in deep multitask networks."
         International Conference on Machine Learning. PMLR, 2018.

@@ -33,7 +33,7 @@ Then you can simply use RotateOnly, RotoGrad. or RotoGradNorm (RotateOnly + Grad
 
 ```python
 from rotograd import RotoGrad
-model = RotoGrad(backbone, [head1, head2], size_z, alpha=1.)
+model = RotoGrad(backbone, [head1, head2], size_z, normalize_losses=True)
 ```
 
 where you can recover the backbone and i-th head simply calling `model.backbone` and `model.heads[i]`. Even
@@ -71,15 +71,23 @@ def step(x, y1, y2):
     return loss1, loss2
 ```
 
+## Example
+
+You can find a working example in the folder `example`. However, it requires some other dependencies to run (e.g., 
+ignite and seaborn). The examples shows how to use RotoGrad on one of the regression problems from the manuscript.
+
+![image](_assets/toy.gif)
+
 ## Citing
 
 Consider citing the following paper if you use RotoGrad:
 
 ```bibtex
-@article{javaloy2021rotograd,
-  title={RotoGrad: Gradient Homogenization in Multitask Learning},
-  author={Javaloy, Adri\'an and Valera, Isabel},
-  journal={arXiv preprint arXiv:2103.02631},
-  year={2021}
+@inproceedings{javaloy2022rotograd,
+   title={RotoGrad: Gradient Homogenization in Multitask Learning},
+   author={Adri{\'a}n Javaloy and Isabel Valera},
+   booktitle={International Conference on Learning Representations},
+   year={2022},
+   url={https://openreview.net/forum?id=T8wHz4rnuGL}
 }
 ```
