@@ -1,0 +1,57 @@
+device: cpu
+verbose: false
+exp_name: test
+log_every: 1
+plot: false
+seed: 5
+
+algorithms:
+  decay: 0.99999
+  learning_rate: 0.05
+  optimizer: adam
+  method: rotograd
+  
+dataset:
+  name: dummy
+  options:
+    size: 256
+    x_0: 0
+    y_0: 0
+
+model:
+  decoder:
+    activation: identity
+    drop_last: true
+    hidden_size: 2
+    num_layers: 0
+    output_size: 2
+    
+  encoder:
+    activation: relu
+    bias: true
+    drop_last: true1
+    hidden_size: 10
+    num_layers: 2
+    
+  input_size: 2
+  latent_size: 2
+  name: dense
+  
+rotograd:
+  normalize: true
+  
+tasks:
+  names:
+  - left
+  - right
+  weights: uniform
+
+training:
+  batch_size: 256
+  epochs: 400
+  optimizer: sgd
+  learning_rate: 0.001
+  #normalize: true
+  save_every: 1
+  plot_every: 20
+  
