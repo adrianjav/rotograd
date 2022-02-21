@@ -74,7 +74,7 @@ def step(x, y1, y2):
 ## Example
 
 You can find a working example in the folder `example`. However, it requires some other dependencies to run (e.g., 
-ignite and seaborn). The examples shows how to use RotoGrad on one of the regression problems from the manuscript.
+ignite and seaborn). The example shows how to use RotoGrad on one of the regression problems from the manuscript.
 
 ![image](_assets/toy.gif)
 
