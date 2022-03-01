@@ -14,7 +14,7 @@ from model import FeedForward
 from engine import create_trainer_and_evaluator, decorate_trainer, decorate_evaluator
 from tasks import get_tasks
 
-from rotograd import RotoGrad, VanillaMTL
+from rotograd import RotoGrad, RotateOnly, VanillaMTL
 
 
 def get_dataloader(batch_size, **kwargs):
@@ -119,6 +119,8 @@ def main(args):
     method = args.algorithms.method
     if method == 'rotograd':
         model = RotoGrad(backbone, heads, args.rotograd.latent_size, normalize_losses=args.rotograd.normalize)
+    elif method == 'rotate':
+        model = RotateOnly(backbone, heads, args.rotograd.latent_size, normalize_losses=args.rotograd.normalize)
     else:
         model = VanillaMTL(backbone, heads)  # TODO add normalize_losses
 

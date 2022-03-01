@@ -190,7 +190,7 @@ class RotateOnly(nn.Module):
     rep: Optional[torch.Tensor]
 
     def __init__(self, backbone: nn.Module, heads: List[nn.Module], latent_size: int, *args,
-                 normalize_losses: bool = False):
+                 burn_in_period: int = 20, normalize_losses: bool = False):
         super(RotateOnly, self).__init__()
         num_tasks = len(heads)
 
@@ -208,6 +208,7 @@ class RotateOnly(nn.Module):
         # Parameters
         self.num_tasks = num_tasks
         self.latent_size = latent_size
+        self.burn_in_period = burn_in_period
         self.normalize_losses = normalize_losses
 
         self.rep = None
@@ -418,9 +419,8 @@ class RotoGrad(RotateOnly):
 
     def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args,
                  burn_in_period: int = 20, normalize_losses: bool = False):
-        super().__init__(backbone, heads, latent_size, *args, normalize_losses=normalize_losses)
+        super().__init__(backbone, heads, latent_size, burn_in_period, *args, normalize_losses=normalize_losses)
 
-        self.burn_in_period = burn_in_period
         self.initial_grads = None
         self.counter = 0
 
