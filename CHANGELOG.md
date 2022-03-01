@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5.2] - 2022-03-01
+
+### Changed
+
+- Fixed an error where `burn_in_period` was not being assigned in `RotateOnly`.
+- Added `RotateOnly` to the working example.
+
 ## [0.1.5.1] - 2022-02-13
 
 ### Added
@@ -42,3 +49,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.4]: https://github.com/adrianjav/rotograd/compare/v0.1.3...v0.1.4
 [0.1.5]: https://github.com/adrianjav/rotograd/compare/v0.1.4...v0.1.5
 [0.1.5.1]: https://github.com/adrianjav/rotograd/compare/v0.1.5...v0.1.5.1
+[0.1.5.2]: https://github.com/adrianjav/rotograd/compare/v0.1.5.1...v0.1.5.2
