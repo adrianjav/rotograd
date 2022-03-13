@@ -43,8 +43,10 @@ As discussed in the paper, it is advisable to have a smaller learning rate for t
 and GradNorm. This is as simple as doing:
 
 ```python
-optim_model = nn.Adam({'params': m.parameters() for m in [backbone, head1, head2]}, lr=learning_rate_model)
-optim_rotograd = nn.Adam({'params': model.parameters()}, lr=learning_rate_rotograd)
+optimizer = nn.Adam(
+    [{'params': m.parameters()} for m in [backbone, head1, head2]] +
+    [{'params': model.parameters(), 'lr': learning_rate_rotograd}],
+    lr=learning_rate_model)
 ```
 
 Finally, we can train the model on all tasks using a simple step function:
@@ -54,20 +56,14 @@ import rotograd
 def step(x, y1, y2):
     model.train()
     
-    optim_model.zero_grad()
-    optim_rotograd.zero_grad()
+    optimizer.zero_grad()
 
     with rotograd.cached():  # Speeds-up computations by caching Rotograd's parameters
         pred1, pred2 = model(x)
-        
-        loss1 = loss_task1(pred1, y1)
-        loss2 = loss_task2(pred2, y2)
-        
+        loss1, loss_2 = loss_task1(pred1, y1), loss_task2(pred2, y2)
         model.backward([loss1, loss2])
+    optimizer.step()
     
-    optim_model.step()
-    optim_rotograd.step()
-        
     return loss1, loss2
 ```
 
