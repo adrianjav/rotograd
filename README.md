@@ -60,7 +60,7 @@ def step(x, y1, y2):
 
     with rotograd.cached():  # Speeds-up computations by caching Rotograd's parameters
         pred1, pred2 = model(x)
-        loss1, loss_2 = loss_task1(pred1, y1), loss_task2(pred2, y2)
+        loss1, loss2 = loss_task1(pred1, y1), loss_task2(pred2, y2)
         model.backward([loss1, loss2])
     optimizer.step()
     
