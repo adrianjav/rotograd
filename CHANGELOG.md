@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6.0] - 2023-08-01
+
+### Changed
+
+- Fixed a bug in `RotoGrad` where `burn_in_period` was not being processed.
+- Addressed #3. Added support to more complex tensor shapes.
+  - Tensors are not assumed to be of the form `... x rotation_shape x post_shape`.
+  - The dimensions in `rotation_shape` are flattened and rotated (the rotation matrices will be of size the number of elements in `rotation_shape`).
+  - The dimensions in `post_shape` will be flattened and not rotated (which is useful, e.g., to rotate the channel dimension on images).
+  - The dimensions prior to `rotation_shape` are taken as batch dimensions.
+
+
 ## [0.1.5.2] - 2022-03-01
 
 ### Changed
@@ -45,8 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   internally to compute GradNorm's weights). We keep the option to still normalize them 
   if desired.
 
-[unreleased]: https://github.com/adrianjav/rotograd/compare/v0.1.4...HEAD
+[unreleased]: https://github.com/adrianjav/rotograd/compare/v0.1.6.0...HEAD
 [0.1.4]: https://github.com/adrianjav/rotograd/compare/v0.1.3...v0.1.4
 [0.1.5]: https://github.com/adrianjav/rotograd/compare/v0.1.4...v0.1.5
 [0.1.5.1]: https://github.com/adrianjav/rotograd/compare/v0.1.5...v0.1.5.1
 [0.1.5.2]: https://github.com/adrianjav/rotograd/compare/v0.1.5.1...v0.1.5.2
+[0.1.6.0]: https://github.com/adrianjav/rotograd/compare/v0.1.5.2...v0.1.6.0

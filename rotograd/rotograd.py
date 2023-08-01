@@ -1,4 +1,5 @@
-from typing import Sequence, List, Any, Optional
+from typing import Sequence, Union, Any, Optional
+from functools import reduce
 
 import torch
 import torch.nn as nn
@@ -101,12 +102,12 @@ class VanillaMTL(nn.Module):
 
 
 def rotate(points, rotation, total_size):
-    if total_size != points.size(-1):
-        points_lo, points_hi = points[:, :rotation.size(1)], points[:, rotation.size(1):]
-        point_lo = torch.einsum('ij,bj->bi', rotation, points_lo)
-        return torch.cat((point_lo, points_hi), dim=-1)
+    if total_size != points.size(-2):
+        points_lo, points_hi = points[..., :rotation.size(1), :], points[..., rotation.size(1):, :]
+        point_lo = torch.einsum('ij,...jk->...ik', rotation, points_lo)
+        return torch.cat((point_lo, points_hi), dim=-2)
     else:
-        return torch.einsum('ij,bj->bi', rotation, points)
+        return torch.einsum('ij,...jk->...ik', rotation, points)
 
 
 def rotate_back(points, rotation, total_size):
@@ -124,7 +125,7 @@ class RotateModule(nn.Module):
         self.p.grads[self.item] = g.clone()
 
     @property
-    def p(self):
+    def p(self) -> 'RotateOnly':
         return self.parent[0]
 
     @property
@@ -136,14 +137,23 @@ class RotateModule(nn.Module):
         return self.p.weight[self.item] if hasattr(self.p, 'weight') else 1.
 
     def rotate(self, z):
-        return rotate(z, self.R, self.p.latent_size)
+        dim_post = -len(self.p.post_shape)
+        dim_rot = -len(self.p.rotation_shape)
+        og_shape = z.shape
+        if dim_post == 0:
+            z = z.unsqueeze(dim=-1)
+            dim_post = -1
+
+        z = z.flatten(start_dim=dim_post)
+        z = z.flatten(start_dim=dim_rot - 1, end_dim=-2)
+
+        return rotate(z, self.R.detach(), self.p.rotation_size).view(og_shape)
 
     def rotate_back(self, z):
-        return rotate_back(z, self.R, self.p.latent_size)
+        return rotate_back(z, self.R, self.p.rotation_size)
 
     def forward(self, z):
-        R = self.R.clone().detach()
-        new_z = rotate(z, R, self.p.latent_size)
+        new_z = self.rotate(z)
         if self.p.training:
             new_z.register_hook(self.hook)
 
@@ -154,17 +164,27 @@ class RotateOnly(nn.Module):
     r"""
     Implementation of the rotating part of RotoGrad as described in the original paper. [1]_
 
+    The module takes as input a vector of shape ... x rotation_shape x
+
     Parameters
     ----------
     backbone
         Shared module.
     heads
         Task-specific modules.
-    latent_size
-        Size of the shared representation, that is, size of the output of backbone.Z
+    rotation_shape
+        Shape of the shared representation to be rotated which, usually, is just the size of the backbone's output.
+        Passing a shape is useful, for example, if you want to rotate an image with shape width x height.
+    post_shape : optional, default=()
+        Shape of the shared representation following the part to be rotated (if any). This part will be kept as it is.
+        This is useful, for example, if you want to rotate only the channels of an image.
     normalize_losses : optional, default=False
         Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
-
+    burn_in_period : optional, default=20
+        When back-propagating towards the shared parameters, *each task loss is normalized dividing by its initial
+        value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
+        will be replaced by the value of the loss at that iteration, that is, :math:`t_0 = burn\_in\_period`.
+        This is done to overcome problems with losses quickly changing in the first iterations.
 
     Attributes
     ----------
@@ -189,10 +209,14 @@ class RotateOnly(nn.Module):
     heads: Sequence[nn.Module]
     rep: Optional[torch.Tensor]
 
-    def __init__(self, backbone: nn.Module, heads: List[nn.Module], latent_size: int, *args,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
+    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], rotation_shape: Union[int, torch.Size], *args,
+                 post_shape: torch.Size = (), normalize_losses: bool = False, burn_in_period: int = 20):
         super(RotateOnly, self).__init__()
         num_tasks = len(heads)
+        if isinstance(rotation_shape, int):
+            rotation_shape = torch.Size((rotation_shape,))
+        assert len(rotation_shape) > 0
+        rotation_size = reduce(int.__mul__, rotation_shape)
 
         for i in range(num_tasks):
             heads[i] = nn.Sequential(RotateModule(self, i), heads[i])
@@ -202,12 +226,14 @@ class RotateOnly(nn.Module):
 
         # Parameterize rotations so we can run unconstrained optimization
         for i in range(num_tasks):
-            self.register_parameter(f'rotation_{i}', nn.Parameter(torch.eye(latent_size), requires_grad=True))
+            self.register_parameter(f'rotation_{i}', nn.Parameter(torch.eye(rotation_size), requires_grad=True))
             orthogonal(self, f'rotation_{i}', triv='expm')  # uses exponential map (alternative: cayley)
 
         # Parameters
         self.num_tasks = num_tasks
-        self.latent_size = latent_size
+        self.rotation_shape = rotation_shape
+        self.rotation_size = rotation_size
+        self.post_shape = post_shape
         self.burn_in_period = burn_in_period
         self.normalize_losses = normalize_losses
 
@@ -342,9 +368,6 @@ class RotateOnly(nn.Module):
 
     def _rep_grad(self):
         old_grads = self.original_grads  # these grads are already rotated, we have to recover the originals
-        # with torch.no_grad():
-        #     grads = [rotate(g, R) for g, R in zip(grads, self.rotation)]
-        #
         grads = self.grads
 
         # Compute the reference vector
@@ -353,10 +376,22 @@ class RotateOnly(nn.Module):
         old_grads2 = [g * divide(mean_norm, g.norm(p=2)) for g in old_grads]
         mean_grad = sum([g for g in old_grads2]).detach().clone() / len(grads)
 
+        dim_post = -len(self.post_shape)
+        dim_rot = -len(self.rotation_shape)
+        og_shape = mean_grad.shape
+        if dim_post == 0:
+            mean_grad = mean_grad.unsqueeze(dim=-1)
+            dim_post = -1
+
+        mean_grad = mean_grad.flatten(start_dim=dim_post)
+        mean_grad = mean_grad.flatten(start_dim=dim_rot - 1, end_dim=-2)
+
         for i, grad in enumerate(grads):
             R = self.rotation[i]
-            loss_rotograd = rotate(mean_grad, R, self.latent_size) - grad
-            loss_rotograd = torch.einsum('bi,bi->b', loss_rotograd, loss_rotograd)
+            loss_rotograd = rotate(mean_grad, R, self.rotation_size).view(og_shape) - grad
+            loss_rotograd = loss_rotograd.flatten(start_dim=dim_post)
+            loss_rotograd = loss_rotograd.flatten(start_dim=dim_rot - 1, end_dim=-2)
+            loss_rotograd = torch.einsum('...ij,...ij->...', loss_rotograd, loss_rotograd)
             loss_rotograd.mean().backward()
 
         return sum(old_grads)
@@ -383,8 +418,12 @@ class RotoGrad(RotateOnly):
         Shared module.
     heads
         Task-specific modules.
-    latent_size
-        Size of the shared representation, that is, size of the output of backbone.Z
+    rotation_shape
+        Shape of the shared representation to be rotated which, usually, is just the size of the backbone's output.
+        Passing a shape is useful, for example, if you want to rotate an image with shape width x height.
+    post_shape : optional, default=()
+        Shape of the shared representation following the part to be rotated (if any). This part will be kept as it is.
+        This is useful, for example, if you want to rotate only the channels of an image.
     burn_in_period : optional, default=20
         When back-propagating towards the shared parameters, *each task loss is normalized dividing by its initial
         value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
@@ -392,7 +431,6 @@ class RotoGrad(RotateOnly):
         This is done to overcome problems with losses quickly changing in the first iterations.
     normalize_losses : optional, default=False
         Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
-
 
     Attributes
     ----------
@@ -403,7 +441,7 @@ class RotoGrad(RotateOnly):
     heads
         Sequence with the (rotated) task-specific heads.
     rep
-        Current output of the backbone (after calling forward during training).
+        Current output of the backbone (aft1er calling forward during training).
 
 
     References
@@ -417,9 +455,10 @@ class RotoGrad(RotateOnly):
     heads: Sequence[nn.Module]
     rep: torch.Tensor
 
-    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
-        super().__init__(backbone, heads, latent_size, burn_in_period, *args, normalize_losses=normalize_losses)
+    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module],  rotation_shape: Union[int, torch.Size], *args,
+                 post_shape: torch.Size = (), normalize_losses: bool = False, burn_in_period: int = 20):
+        super().__init__(backbone, heads, rotation_shape, *args,
+                         post_shape=post_shape, burn_in_period=burn_in_period, normalize_losses=normalize_losses)
 
         self.initial_grads = None
         self.counter = 0
@@ -451,10 +490,14 @@ class RotoGradNorm(RotoGrad):
         Shared module.
     heads
         Task-specific modules.
-    latent_size
-        Size of the shared representation, that is, size of the output of backbone.
+    rotation_shape
+        Shape of the shared representation to be rotated which, usually, is just the size of the backbone's output.
+        Passing a shape is useful, for example, if you want to rotate an image with shape width x height.
     alpha
         :math:`\alpha` hyper-parameter as described in GradNorm, [2]_ used to compute the reference direction.
+    post_shape : optional, default=()
+        Shape of the shared representation following the part to be rotated (if any). This part will be kept as it is.
+        This is useful, for example, if you want to rotate only the channels of an image.
     burn_in_period : optional, default=20
         When back-propagating towards the shared parameters, *each task loss is normalized dividing by its initial
         value*, :math:`{L_k(t)}/{L_k(t_0 = 0)}`. This parameter sets a number of iterations after which the denominator
@@ -462,7 +505,7 @@ class RotoGradNorm(RotoGrad):
         This is done to overcome problems with losses quickly changing in the first iterations.
     normalize_losses : optional, default=False
         Whether to use this normalized losses to back-propagate through the task-specific parameters as well.
-
+    TODO
 
     Attributes
     ----------
@@ -486,10 +529,10 @@ class RotoGradNorm(RotoGrad):
 
     """
 
-    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
-        super().__init__(backbone, heads, latent_size, *args, burn_in_period=burn_in_period,
-                         normalize_losses=normalize_losses)
+    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module],  rotation_shape: Union[int, torch.Size], *args,
+                 alpha: float, post_shape: torch.Size = (), normalize_losses: bool = False, burn_in_period: int = 20):
+        super().__init__(backbone, heads, rotation_shape, *args,
+                         post_shape=post_shape, burn_in_period=burn_in_period, normalize_losses=normalize_losses)
         self.alpha = alpha
         self.weight_ = nn.ParameterList([nn.Parameter(torch.ones([]), requires_grad=True) for _ in range(len(heads))])
 

@@ -34,7 +34,7 @@ model:
     num_layers: 2
     
   input_size: 2
-  latent_size: 2
+  rotation_size: 2
   name: dense
   
 rotograd:

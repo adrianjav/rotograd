@@ -47,8 +47,8 @@ def build_dense(tasks, args):
     shared = getattr(args, 'shared', False)
 
     enc_params = getattr(args, 'encoder', args)
-    backbone = FeedForward(args.input_size, args.latent_size, enc_params.hidden_size, enc_params.num_layers,
-                               activations[enc_params.activation])
+    backbone = FeedForward(args.input_size, args.rotation_size, enc_params.hidden_size, enc_params.num_layers,
+                           activations[enc_params.activation])
 
     dec_params = getattr(args, 'decoder', args)
     if isinstance(dec_params.hidden_size, int) and not shared:
@@ -59,7 +59,7 @@ def build_dense(tasks, args):
         dec_params.num_layers = [dec_params.num_layers] * len(tasks)
 
     for i, task_i in enumerate(tasks):
-        heads.append(FeedForward(args.latent_size, dec_params.output_size[i], dec_params.hidden_size[i],
+        heads.append(FeedForward(args.rotation_size, dec_params.output_size[i], dec_params.hidden_size[i],
                                  dec_params.num_layers[i], activations[dec_params.activation],
                                  dec_params.drop_last or task_i.loss == 'mse'))
 
@@ -113,14 +113,14 @@ def main(args):
     tasks = get_tasks(args.tasks.names, args.tasks.weights, loaders['train'].dataset)
     backbone, heads = build_dense(tasks, args.model)
 
-    if not hasattr(args.rotograd, 'latent_size'):
-        args.rotograd.latent_size = backbone.output_size
+    if not hasattr(args.rotograd, 'rotation_size'):
+        args.rotograd.rotation_size = backbone.output_size
 
     method = args.algorithms.method
     if method == 'rotograd':
-        model = RotoGrad(backbone, heads, args.rotograd.latent_size, normalize_losses=args.rotograd.normalize)
+        model = RotoGrad(backbone, heads, args.rotograd.rotation_size, normalize_losses=args.rotograd.normalize)
     elif method == 'rotate':
-        model = RotateOnly(backbone, heads, args.rotograd.latent_size, normalize_losses=args.rotograd.normalize)
+        model = RotateOnly(backbone, heads, args.rotograd.rotation_size, normalize_losses=args.rotograd.normalize)
     else:
         model = VanillaMTL(backbone, heads)  # TODO add normalize_losses
 
